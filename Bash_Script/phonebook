@@ -1,0 +1,235 @@
+#!/bin/bash
+
+
+# PHONEBOOKNAME: is a global variable used to hold the file name for all the script 
+export PHONEBOOKNAME=phonebook.txt
+
+
+#Print_Help function is used to print the options for the user in three cases:
+#1- He did not insert any inputs
+#2- He entered more than one 
+#3- He entered wrong option 
+Print_Help() {
+
+	echo "Insert new contact name and number, with the option \"-i\""
+	echo "View all saved contacts details, with the option \"-v\""
+	echo "Search by contact name in the phonebook database, with the option \"-s\""
+	echo "Delete all records, with \"-e\""
+	echo "Delete one contact name, with \"-d\""
+
+}
+
+
+#Insert_New_Contact function is used to insert a new contact into the phonebook
+Insert_New_Contact() {
+	clear
+	#Read the name from the user
+	read -p "Please enter the name: " newcontactname
+	#Check if the name contains ',' and replace it with '_' 
+	#As ',' is used as a delimiter in the phonebook file
+	#searching for one or more ',' and replace them with '_'
+	echo $newcontactname | sed -r 's/[,]+/_/g' > /dev/null 
+	
+	#Check if the phonebook file is exist or not
+	if [ -f $PHONEBOOKNAME ]
+		then
+		#check for duplicate, i use the comma to make sure that the 
+		#name has an exact in the file even if it has spaces.
+		if grep -qi "$newcontactname," $PHONEBOOKNAME;
+			then
+			#Print to the user that this name exists in the file
+			echo "Sorry but this name exists in the phonebook."
+			echo "Please try another name."
+		else 
+			#Read the phone number from the user
+			read -p "Please enter the phone number: " newcontactphone
+			#Insert the date into the file
+			echo "$newcontactname,$newcontactphone" >> $PHONEBOOKNAME
+			echo "Done saving."
+		fi # eod of if grep -q "$newcontactname," $PHONEBOOKNAME;
+	else 
+		#Read the phone number from the user
+		read -p "Please enter the phone number: " newcontactphone
+		
+		#Create a new file with the name of PHONEBOOKNAME and insert the date into it
+		touch phonebook.txt
+		echo "$newcontactname,$newcontactphone" > $PHONEBOOKNAME
+		echo "Done saving."
+		
+	fi #end of if [ -f $PHONEBOOKNAME ]
+	
+
+}
+
+
+#Show_All_Contacts is used to print all the contacts we have in the phonebook
+Show_All_Contacts(){
+	clear
+	#Check if the phonebook file is exist or not
+	if [ -f $PHONEBOOKNAME ]
+		then
+		#Use sort command to sort the names first, then use colmun command
+		#to print the phonebook file in a tabular form 
+		#-t -s',' to tell the command that the delimiter is ',' not space.
+		sort $PHONEBOOKNAME | column -t -s','
+	else 
+		echo "The phonebook is empty."
+	fi #end of if [ -f $PHONEBOOKNAME ]
+
+}
+
+
+
+#Search_Name is used to search for a name in the file if exists print the data for it 
+# if not exist print that it is not exists
+Search_Name(){
+	clear
+	#Check if the phonebook file is exist or not
+	if [ -f $PHONEBOOKNAME ]
+		then
+		#Read the name from the user
+		read -p "Please enter the name: " newcontactname
+	
+		#check for the name, i use the comma to make sure that the 
+		#name has an exact in the file even if it has spaces.
+		if grep -qi "$newcontactname," $PHONEBOOKNAME;
+			then
+			#Get the number of the line that contains the contact
+			#using grep -n we get the line number and the line itself.
+			#Using cut to get the line number only.
+			linenumber=$(grep -n "$newcontactname," $PHONEBOOKNAME | cut -f1 -d:)
+			
+			#Using the head and tail get the line text form the file.
+			nameandphone=$(head -$linenumber $PHONEBOOKNAME | tail +$linenumber)
+			
+			#Cut the line into two parts the name and the phone.
+			name=$(echo $nameandphone | cut -f1 -d,)	#Take the first part.
+			phone=$(echo $nameandphone | cut -f2 -d,)	#Take the second part.
+			
+			#Print to the user the contact data.
+			echo "$name	$phone"
+			
+		else 
+			#Tell the user that the name does not exists
+			echo "This name does not exist in the phonebook."
+		fi #end of if grep -q "$newcontactname," $PHONEBOOKNAME;
+	else 
+		echo "The phonebook is empty."
+	fi #end of if [ -f $PHONEBOOKNAME ]
+}
+
+
+
+#Delete_All_Contacts is used to delete the whole file of the phonebook
+Delete_All_Contacts(){
+	clear
+	#First get a confirmation that he wants to delete the whole phonebook.
+	echo "Are you sure, you want to delete the whole phonebook?"
+	read -p "It is irreversible operation. (y/n): " confirmation
+	
+	#Check the input to take a decision
+	if [ $confirmation == y ]
+		then
+		#Remove the file
+		rm  $PHONEBOOKNAME
+		#Print that the function is done.
+		echo "Done deleting the phonebook."
+	
+	elif [ $confirmation == n ]
+		then   
+		#Print that the function is ending.
+		echo "Nothing changed."
+	
+	else 
+		#Print that the input is wrong
+		echo "Wrong input."
+	
+	fi #end of if [ $confirmation == y ]
+	
+}
+
+
+
+#Delete_One_Contact is used to delete one contact from the phonebook after asking for the name
+Delete_One_Contact(){
+
+	clear
+	#Check if the phonebook file is exist or not
+	if [ -f $PHONEBOOKNAME ]
+		then
+		
+		#Read the name from the user
+		read -p "Please enter the name: " contactname
+		#Check if the name contains ',' and replace it with '_' 
+		#As ',' is used as a delimiter in the phonebook file
+		#searching for one or more ',' and replace them with '_'
+		echo $newcontactname | sed -r 's/[,]+/_/g' > /dev/null
+		
+		#check if the name exists, i use the comma to make sure that the 
+		#name has an exact in the file even if it has spaces.
+		if grep -qi "$contactname," $PHONEBOOKNAME;
+			then
+			
+			#Remove the contact by taking all the lines except the line 
+			#that the contact exists on it into a new file called tempfile
+			#then rename the file with our phonebook name.
+			grep -vi "$contactname," $PHONEBOOKNAME  > tempfile
+			 
+			mv tempfile $PHONEBOOKNAME
+			
+			#Tell the user that the deleting is done.
+			echo "Done deleting."
+			
+		else 
+			#Tell the user that the name does not exist
+			echo "This contact does not exist on the phonebook."
+		fi # eod of if grep -q "$newcontactname," $PHONEBOOKNAME;
+		
+	else 
+		echo "The phonebook is empty."
+	fi #end of if [ -f $PHONEBOOKNAME ]
+
+}
+
+
+
+#Check the number of inputs to the script if it is one ok if it is not print the help
+if [ $# == 1 ] 
+	then
+	
+	#Check the input if it is one of the options or not
+	case $1 in
+	
+	#For -i we call the function of inserting new contact
+	-i)	
+		Insert_New_Contact;;
+		
+	-v)
+		Show_All_Contacts;;
+		
+	-s)	
+		Search_Name;;
+		
+	-e)
+		Delete_All_Contacts;;
+	
+	-d)	
+		Delete_One_Contact;;
+			
+	*)
+		#Tell the user that the option is wrong and show him the available options
+		clear
+		echo "False option. Please choose one of the next options: " 
+		Print_Help
+	
+	esac #end of case $1 in
+	
+else
+	#Tell the user that he has to choose an option and show him the available options
+	clear
+	echo "Please choose one of the next options: " 
+	Print_Help	
+	
+fi #end of if [ $# == 1 ] 
+
+
